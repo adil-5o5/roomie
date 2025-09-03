@@ -4,6 +4,7 @@ import 'package:roomie/auth/forgotpassword_page.dart';
 import 'package:roomie/auth/signup_page.dart';
 import 'package:roomie/home/home_page.dart';
 import 'package:roomie/widgets/customappbar.dart';
+import 'package:roomie/theme/app_theme.dart';
 import 'auth_services.dart';
 
 class SigninPage extends StatefulWidget {
@@ -28,7 +29,7 @@ class _SigninPageState extends State<SigninPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("please fill the fields"),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.errorRed,
         ),
       );
       return;
@@ -51,7 +52,10 @@ class _SigninPageState extends State<SigninPage> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: AppTheme.errorRed,
+        ),
       );
     } finally {
       setState(() {
@@ -79,7 +83,7 @@ class _SigninPageState extends State<SigninPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Google Login Error: $e"),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.errorRed,
         ),
       );
     } finally {
@@ -92,68 +96,73 @@ class _SigninPageState extends State<SigninPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(title: "S I G N   I N"),
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(height: 10),
 
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(height: 60),
-
-              // Logo/Brand Section
-              Container(
-                alignment: Alignment.center,
-                child: Column(
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(20),
+                // Logo/Brand Section with glassmorphic effect
+                Container(
+                  decoration: AppTheme.glassmorphicDecoration,
+                  padding: EdgeInsets.all(32),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.accentGradient,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryOrange.withOpacity(0.3),
+                              blurRadius: 20,
+                              spreadRadius: 0,
+                              offset: Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.meeting_room,
+                          color: Colors.white,
+                          size: 40,
+                        ),
                       ),
-                      child: Icon(
-                        Icons.shopping_bag,
-                        color: Colors.white,
-                        size: 40,
+                      SizedBox(height: 24),
+                      Text(
+                        "Welcome Back",
+                        style: Theme.of(
+                          context,
+                        ).textTheme.displayMedium?.copyWith(),
                       ),
-                    ),
-                    SizedBox(height: 24),
-                    Text(
-                      "Welcome Back",
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                      SizedBox(height: 8),
+                      Text(
+                        "Sign in to continue roomie",
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      "Sign in to continue shopping",
-                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              SizedBox(height: 60),
+                SizedBox(height: 60),
 
-              // Login Form
-              Card(
-                child: Padding(
+                // Login Form with glassmorphic effect
+                Container(
+                  decoration: AppTheme.glassmorphicCardDecoration,
                   padding: EdgeInsets.all(24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
                         "Login",
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
+                        style: Theme.of(context).textTheme.displaySmall,
                         textAlign: TextAlign.center,
                       ),
                       SizedBox(height: 32),
@@ -162,11 +171,12 @@ class _SigninPageState extends State<SigninPage> {
                       TextField(
                         controller: emailController,
                         keyboardType: TextInputType.emailAddress,
+                        style: TextStyle(color: AppTheme.textPrimary),
                         decoration: InputDecoration(
                           labelText: "Email",
                           prefixIcon: Icon(
                             Icons.email_outlined,
-                            color: Colors.grey[600],
+                            color: AppTheme.textSecondary,
                           ),
                         ),
                       ),
@@ -176,18 +186,19 @@ class _SigninPageState extends State<SigninPage> {
                       TextField(
                         controller: passwordController,
                         obscureText: _obscurePassword,
+                        style: TextStyle(color: AppTheme.textPrimary),
                         decoration: InputDecoration(
                           labelText: "Password",
                           prefixIcon: Icon(
                             Icons.lock_outlined,
-                            color: Colors.grey[600],
+                            color: AppTheme.textSecondary,
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility
                                   : Icons.visibility_off,
-                              color: Colors.grey[600],
+                              color: AppTheme.textSecondary,
                             ),
                             onPressed: () {
                               setState(() {
@@ -204,7 +215,7 @@ class _SigninPageState extends State<SigninPage> {
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: () {
-                            Navigator.pushReplacement(
+                            Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => ForgotPasswordPage(),
@@ -242,18 +253,17 @@ class _SigninPageState extends State<SigninPage> {
 
                       // Divider
                       Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.center, // ✅ Add this
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Expanded(child: Divider(color: Colors.grey[300])),
+                          Expanded(child: Divider(color: AppTheme.lightGrey)),
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
                               "OR",
-                              style: TextStyle(color: Colors.grey[600]),
+                              style: TextStyle(color: AppTheme.textSecondary),
                             ),
                           ),
-                          Expanded(child: Divider(color: Colors.grey[300])),
+                          Expanded(child: Divider(color: AppTheme.lightGrey)),
                         ],
                       ),
 
@@ -272,45 +282,49 @@ class _SigninPageState extends State<SigninPage> {
                         ),
                         style: OutlinedButton.styleFrom(
                           padding: EdgeInsets.symmetric(vertical: 16),
-                          side: BorderSide(color: Colors.grey[300]!),
+                          side: BorderSide(
+                            color: AppTheme.lightGrey.withOpacity(0.5),
+                          ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.glassBorderRadius,
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
 
-              SizedBox(height: 32),
+                SizedBox(height: 32),
 
-              // Sign Up Link
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "Don't have an account? ",
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => SignupPage()),
-                      );
-                    },
-                    child: Text(
-                      "Sign Up",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                // Sign Up Link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Don't have an account? ",
+                      style: TextStyle(color: AppTheme.textSecondary),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => SignupPage()),
+                        );
+                      },
+                      child: Text(
+                        "Sign Up",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryOrange,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
