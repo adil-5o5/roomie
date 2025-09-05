@@ -7,6 +7,12 @@ import 'package:roomie/services/room_service.dart';
 import 'createroom_page.dart';
 import 'room_detail_page.dart';
 
+/// Home page that displays a list of available rooms for users to browse and join
+/// Features:
+/// - Real-time room list from Firestore
+/// - Search functionality to filter rooms
+/// - Excludes rooms created by the current user
+/// - Navigation to room details and creation
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -15,14 +21,24 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // Controller for the search input field
   final TextEditingController _searchController = TextEditingController();
+
+  // Service class that handles all room-related Firestore operations
   final RoomService _roomService = RoomService();
+
+  // Firebase Auth instance to get current user information
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // List to store filtered rooms based on search query
   List<RoomModel> _filteredRooms = [];
+
+  // Current search query string
   String _searchQuery = '';
 
   @override
   void dispose() {
+    // Clean up the search controller to prevent memory leaks
     _searchController.dispose();
     super.dispose();
   }
@@ -38,61 +54,82 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Search Bar
+              // Search Bar - allows users to filter rooms by title, description, or keywords
               TextField(
-                controller: _searchController,
+                controller:
+                    _searchController, // Controller to manage text input
                 decoration: InputDecoration(
-                  hintText: "Search for rooms...",
-                  hintStyle: TextStyle(color: Colors.grey[500]),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
+                  hintText: "Search for rooms...", // Placeholder text
+                  hintStyle: TextStyle(
+                    color: Colors.grey[500],
+                  ), // Grey placeholder
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: Colors.grey[500],
+                  ), // Search icon
                   suffixIcon: IconButton(
-                    icon: Icon(Icons.clear, color: Colors.grey[500]),
+                    icon: Icon(
+                      Icons.clear,
+                      color: Colors.grey[500],
+                    ), // Clear button
                     onPressed: () {
-                      _searchController.clear();
+                      _searchController.clear(); // Clear the text field
                       setState(() {
-                        _searchQuery = '';
+                        _searchQuery = ''; // Reset search query
                       });
                     },
                   ),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(12), // Rounded corners
+                    borderSide: BorderSide(
+                      color: Colors.grey[300]!,
+                    ), // Grey border
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderSide: BorderSide(
+                      color: Colors.grey[300]!,
+                    ), // Grey border when not focused
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.black, width: 2),
+                    borderSide: BorderSide(
+                      color: Colors.black,
+                      width: 2,
+                    ), // Black border when focused
                   ),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: Colors.white, // White background
                   contentPadding: EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 18,
                   ),
                 ),
                 onChanged: (value) {
+                  // Update search query in real-time as user types
                   setState(() {
-                    _searchQuery = value.toLowerCase();
+                    _searchQuery = value
+                        .toLowerCase(); // Convert to lowercase for case-insensitive search
                   });
                 },
               ),
 
               SizedBox(height: 20),
 
-              // Rooms List with StreamBuilder
+              // Rooms List with StreamBuilder - displays real-time room data from Firestore
               Expanded(
                 child: StreamBuilder<List<RoomModel>>(
-                  stream: _roomService.getRoomsStream(),
+                  stream: _roomService
+                      .getRoomsStream(), // Stream of all rooms from Firestore
                   builder: (context, snapshot) {
+                    // Show loading indicator while data is being fetched
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return Center(
                         child: CircularProgressIndicator(color: Colors.black),
                       );
                     }
 
+                    // Show error state if something went wrong
                     if (snapshot.hasError) {
                       return Center(
                         child: Column(
@@ -101,7 +138,7 @@ class _HomePageState extends State<HomePage> {
                             Icon(
                               Icons.error_outline,
                               size: 64,
-                              color: Colors.red[400],
+                              color: Colors.red[400], // Red error icon
                             ),
                             SizedBox(height: 16),
                             Text(
@@ -114,7 +151,8 @@ class _HomePageState extends State<HomePage> {
                             ),
                             SizedBox(height: 8),
                             Text(
-                              snapshot.error.toString(),
+                              snapshot.error
+                                  .toString(), // Show actual error message
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[600],
@@ -126,16 +164,21 @@ class _HomePageState extends State<HomePage> {
                       );
                     }
 
+                    // Get all rooms from Firestore
                     final allRooms = snapshot.data ?? [];
-                    final currentUserId = _auth.currentUser?.uid;
+                    final currentUserId =
+                        _auth.currentUser?.uid; // Get current user's ID
 
                     // Filter rooms based on search query and exclude user's own rooms
                     final filteredRooms = allRooms.where((room) {
-                      // Exclude rooms created by current user
+                      // Exclude rooms created by current user (they can't join their own rooms)
                       if (room.createdBy == currentUserId) return false;
 
-                      // Apply search filter
-                      if (_searchQuery.isEmpty) return true;
+                      // Apply search filter if user has entered a search query
+                      if (_searchQuery.isEmpty)
+                        return true; // Show all rooms if no search
+
+                      // Search in title, description, and keywords
                       return room.title.toLowerCase().contains(_searchQuery) ||
                           room.description.toLowerCase().contains(
                             _searchQuery,

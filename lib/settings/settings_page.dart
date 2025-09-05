@@ -23,6 +23,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadUserData();
   }
 
+
   /// Load user data from Firestore
   Future<void> _loadUserData() async {
     final user = _auth.currentUser;
@@ -34,9 +35,12 @@ class _SettingsPageState extends State<SettingsPage> {
             _userData = doc.data();
           });
         }
+        print('🔍 Settings Page - Current user ID: ${user.uid}');
       } catch (e) {
         print('Error loading user data: $e');
       }
+    } else {
+      print('❌ Settings Page - No current user found');
     }
   }
 
@@ -57,9 +61,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
+      body: RefreshIndicator(
+        onRefresh: _loadUserData,
+        child: SingleChildScrollView(
+          physics: AlwaysScrollableScrollPhysics(), // Enable pull-to-refresh
+          padding: EdgeInsets.all(16.0),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Profile Section
@@ -200,7 +207,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     stream: _firestore
                         .collection('rooms')
                         .where('createdBy', isEqualTo: _auth.currentUser?.uid)
-                        .orderBy('createdAt', descending: true)
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -215,11 +221,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       }
 
                       if (snapshot.hasError) {
+                        print('❌ Settings Page - Error loading rooms: ${snapshot.error}');
                         return Center(
                           child: Padding(
                             padding: EdgeInsets.all(20),
                             child: Text(
-                              "Error loading rooms",
+                              "Error loading rooms: ${snapshot.error}",
                               style: TextStyle(color: Colors.red, fontSize: 14),
                             ),
                           ),
@@ -227,6 +234,21 @@ class _SettingsPageState extends State<SettingsPage> {
                       }
 
                       final rooms = snapshot.data?.docs ?? [];
+                      print('🔍 Settings Page - Found ${rooms.length} rooms for user: ${_auth.currentUser?.uid}');
+
+                      // Sort rooms by creation date (newest first) on client side
+                      rooms.sort((a, b) {
+                        final aData = a.data() as Map<String, dynamic>;
+                        final bData = b.data() as Map<String, dynamic>;
+                        final aTime = aData['createdAt'] as Timestamp?;
+                        final bTime = bData['createdAt'] as Timestamp?;
+                        
+                        if (aTime == null && bTime == null) return 0;
+                        if (aTime == null) return 1;
+                        if (bTime == null) return -1;
+                        
+                        return bTime.compareTo(aTime); // Descending order (newest first)
+                      });
 
                       if (rooms.isEmpty) {
                         return Center(

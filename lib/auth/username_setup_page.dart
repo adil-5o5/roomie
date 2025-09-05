@@ -4,7 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:roomie/navigation/main_navigation.dart';
 
 /// Username setup page that appears after successful authentication
-/// Allows users to set a unique username with validation rules
+/// This page is shown immediately after user signs up or logs in
+/// Allows users to set a unique username with strict validation rules:
+/// - 3-20 characters long
+/// - Only lowercase letters, numbers, and underscores
+/// - Must be unique across all users
+/// - Can be skipped for later setup
 class UsernameSetupPage extends StatefulWidget {
   const UsernameSetupPage({super.key});
 
@@ -13,11 +18,22 @@ class UsernameSetupPage extends StatefulWidget {
 }
 
 class _UsernameSetupPageState extends State<UsernameSetupPage> {
+  // Controller for the username input field
   final TextEditingController _usernameController = TextEditingController();
+
+  // Firestore instance for database operations
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Firebase Auth instance to get current user
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Loading state when saving username to database
   bool _isLoading = false;
+
+  // Loading state when checking if username is available
   bool _isCheckingUsername = false;
+
+  // Error message to display if username validation fails
   String? _usernameError;
 
   @override
@@ -26,33 +42,51 @@ class _UsernameSetupPageState extends State<UsernameSetupPage> {
     super.dispose();
   }
 
-  /// Validate username format (lowercase letters, numbers, underscore only)
+  /// Validates username format according to app rules
+  /// Rules: 3-20 characters, only lowercase letters, numbers, and underscores
+  /// Returns true if username meets all requirements
   bool _isValidUsername(String username) {
+    // Regular expression that matches only lowercase letters, numbers, and underscores
     final regex = RegExp(r'^[a-z0-9_]+$');
+
+    // Check if username matches regex AND is within length limits
     return regex.hasMatch(username) &&
         username.length >= 3 &&
         username.length <= 20;
   }
 
-  /// Check if username is available in Firestore
+  /// Checks if username is already taken by another user
+  /// Queries Firestore users collection to see if username exists
+  /// Returns true if username is available (not taken)
   Future<bool> _isUsernameAvailable(String username) async {
     try {
+      // Query users collection for existing username
       final doc = await _firestore
           .collection('users')
           .where('username', isEqualTo: username)
-          .limit(1)
+          .limit(1) // Only need to check if at least one exists
           .get();
+
+      // Return true if no documents found (username is available)
       return doc.docs.isEmpty;
     } catch (e) {
       print('Error checking username availability: $e');
-      return false;
+      return false; // Return false on error to be safe
     }
   }
 
-  /// Save username to user profile in Firestore
+  /// Saves the username to user profile in Firestore
+  /// This method handles the complete flow:
+  /// 1. Validates username format
+  /// 2. Checks if username is available
+  /// 3. Saves to Firestore user document
+  /// 4. Updates Firebase Auth display name
+  /// 5. Navigates to main app
   Future<void> _saveUsername() async {
+    // Get username from input field and normalize it
     final username = _usernameController.text.trim().toLowerCase();
 
+    // Step 1: Validate username format
     if (!_isValidUsername(username)) {
       setState(() {
         _usernameError =
@@ -61,13 +95,14 @@ class _UsernameSetupPageState extends State<UsernameSetupPage> {
       return;
     }
 
+    // Step 2: Show loading state while checking availability
     setState(() {
       _isCheckingUsername = true;
       _usernameError = null;
     });
 
     try {
-      // Check if username is available
+      // Step 3: Check if username is available
       bool isAvailable = await _isUsernameAvailable(username);
 
       if (!isAvailable) {
@@ -78,26 +113,31 @@ class _UsernameSetupPageState extends State<UsernameSetupPage> {
         return;
       }
 
+      // Step 4: Show saving state
       setState(() {
         _isLoading = true;
         _isCheckingUsername = false;
       });
 
-      // Save username to user document
+      // Step 5: Save username to user document in Firestore
       final user = _auth.currentUser;
       if (user != null) {
-        await _firestore.collection('users').doc(user.uid).set({
-          'username': username,
-          'email': user.email,
-          'displayName': user.displayName ?? '',
-          'createdAt': FieldValue.serverTimestamp(),
-          'role': 'Member', // Default role
-        }, SetOptions(merge: true));
+        // Create or update user document with username and profile info
+        await _firestore.collection('users').doc(user.uid).set(
+          {
+            'username': username,
+            'email': user.email,
+            'displayName': user.displayName ?? '',
+            'createdAt': FieldValue.serverTimestamp(),
+            'role': 'Member', // Default role for new users
+          },
+          SetOptions(merge: true),
+        ); // merge: true prevents overwriting existing data
 
-        // Update user display name
+        // Step 6: Update Firebase Auth display name for consistency
         await user.updateDisplayName(username);
 
-        // Navigate to main navigation
+        // Step 7: Navigate to main app navigation
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -106,6 +146,7 @@ class _UsernameSetupPageState extends State<UsernameSetupPage> {
         }
       }
     } catch (e) {
+      // Handle any errors during the save process
       setState(() {
         _usernameError = "Error saving username: $e";
         _isLoading = false;

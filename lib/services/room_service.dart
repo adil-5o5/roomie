@@ -3,14 +3,36 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/room_model.dart';
 import '../models/message_model.dart';
 
-/// Service class for handling room-related Firestore operations
-/// Manages room creation, joining, and message handling
+/// Service class for handling all room-related Firestore operations
+/// This is the central service that manages:
+/// - Room creation and data persistence
+/// - Real-time room data streaming
+/// - User join/leave functionality with limits
+/// - Message sending and real-time chat
+/// - Room membership management
+///
+/// All methods handle authentication, error handling, and data validation
 class RoomService {
+  // Firestore instance for database operations
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Firebase Auth instance for user authentication
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Create a new room in Firestore
-  /// Saves room data to 'rooms' collection with auto-generated ID
+  /// Creates a new room in Firestore with all required data
+  /// This method:
+  /// 1. Validates user authentication
+  /// 2. Creates room document with creator as first member
+  /// 3. Saves to 'rooms' collection with auto-generated ID
+  /// 4. Returns the room ID for further operations
+  ///
+  /// Parameters:
+  /// - title: Room title (required)
+  /// - description: Room description (required)
+  /// - membersCount: Maximum number of members allowed
+  /// - keywords: List of search keywords for the room
+  ///
+  /// Returns: Room ID as string
   Future<String> createRoom({
     required String title,
     required String description,
@@ -18,25 +40,29 @@ class RoomService {
     required List<String> keywords,
   }) async {
     try {
+      // Step 1: Check if user is authenticated
       final user = _auth.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
-      // Create room document
+      // Step 2: Prepare room data structure
       final roomData = {
         'title': title,
         'description': description,
         'membersCount': membersCount,
         'keywords': keywords,
-        'createdBy': user.uid,
-        'createdAt': FieldValue.serverTimestamp(),
-        'members': [user.uid], // Creator is automatically a member
+        'createdBy': user.uid, // Track who created the room
+        'createdAt':
+            FieldValue.serverTimestamp(), // Server timestamp for consistency
+        'members': [user.uid], // Creator is automatically the first member
       };
 
-      // Add room to Firestore and get the document ID
+      // Step 3: Save room to Firestore and get document reference
       final docRef = await _firestore.collection('rooms').add(roomData);
 
       print('✅ Room created successfully with ID: ${docRef.id}');
-      return docRef.id;
+      print('🔍 Room created by user: ${user.uid}');
+      print('🔍 Room data: $roomData');
+      return docRef.id; // Return room ID for navigation/updates
     } catch (e) {
       print('❌ Error creating room: $e');
       throw Exception('Failed to create room: $e');

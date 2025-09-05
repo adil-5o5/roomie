@@ -4,10 +4,18 @@ import 'package:roomie/models/message_model.dart';
 import 'package:roomie/services/room_service.dart';
 
 /// Chat page that displays real-time messages for a specific room
-/// Supports text messages, image uploads, and link detection
+/// This page provides a complete chat experience with:
+/// - Real-time message streaming from Firestore
+/// - Message input with instant sending (no loading delays)
+/// - Link detection and display
+/// - Image support (placeholder for future implementation)
+/// - Auto-scroll to new messages
+/// - User identification with avatars
+///
+/// Messages are stored in Firestore subcollection: rooms/{roomId}/messages
 class ChatPage extends StatefulWidget {
-  final String roomId;
-  final String roomTitle;
+  final String roomId; // ID of the room to display messages for
+  final String roomTitle; // Title of the room for display in app bar
 
   const ChatPage({super.key, required this.roomId, required this.roomTitle});
 
@@ -16,9 +24,16 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
+  // Controller for the message input field
   final TextEditingController _messageController = TextEditingController();
+
+  // Service for handling room and message operations
   final RoomService _roomService = RoomService();
+
+  // Firebase Auth instance to get current user info
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Controller for auto-scrolling to new messages
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -388,31 +403,42 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  /// Send a message to the room
+  /// Sends a message to the room with instant feedback
+  /// This method provides a smooth chat experience by:
+  /// 1. Clearing input immediately (no loading delays)
+  /// 2. Detecting and extracting links from message text
+  /// 3. Sending to Firestore via RoomService
+  /// 4. Showing error messages only if sending fails
+  ///
+  /// The message appears instantly in the UI due to real-time streaming
   void _sendMessage() async {
+    // Get message text and validate
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    // Clear the input immediately for better UX
+    // Clear input immediately for better user experience
+    // This makes the chat feel responsive and instant
     _messageController.clear();
 
     try {
-      // Detect if message contains a link
+      // Step 1: Detect if message contains a link
       String? link;
       final linkRegex = RegExp(r'https?://[^\s]+', caseSensitive: false);
       final match = linkRegex.firstMatch(text);
       if (match != null) {
-        link = match.group(0);
+        link = match.group(0); // Extract the full URL
       }
 
-      // Send message to Firestore (no loading state)
+      // Step 2: Send message to Firestore via RoomService
+      // No loading state needed - message appears instantly via StreamBuilder
       await _roomService.sendMessage(
         roomId: widget.roomId,
         text: text,
         link: link,
       );
     } catch (e) {
-      // Show error message if sending fails
+      // Step 3: Show error message only if sending fails
+      // This is rare since we clear input immediately
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Failed to send message: $e"),

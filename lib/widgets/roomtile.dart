@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
 
+/// Reusable widget that displays room information in a card format
+/// This widget is used in the HomePage to show available rooms
+///
+/// Features:
+/// - Clean card design with shadow and rounded corners
+/// - Room title, description, and member count display
+/// - Tap functionality to navigate to room details
+/// - Consistent styling with app theme
+///
+/// Used in: HomePage room list
 class RoomTile extends StatelessWidget {
-  final String title;
-  final String description;
-  final int peopleCount;
-  final VoidCallback? onTap;
+  final String title; // Room title to display
+  final String description; // Room description (truncated to 2 lines)
+  final int peopleCount; // Number of people currently in the room
+  final VoidCallback? onTap; // Callback function when tile is tapped
 
   const RoomTile({
     super.key,
@@ -17,19 +27,22 @@ class RoomTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      // Make entire card tappable for better UX
       onTap: onTap,
       child: Container(
         width: double.infinity,
+        // Card styling with shadow and rounded corners
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey[200]!),
+          color: Colors.white, // White background
+          borderRadius: BorderRadius.circular(16), // Rounded corners
+          border: Border.all(color: Colors.grey[200]!), // Light grey border
           boxShadow: [
+            // Subtle shadow for depth
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               spreadRadius: 0,
               blurRadius: 10,
-              offset: Offset(0, 2),
+              offset: Offset(0, 2), // Shadow below the card
             ),
           ],
         ),
