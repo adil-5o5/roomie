@@ -2,9 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:roomie/auth/forgotpassword_page.dart';
 import 'package:roomie/auth/signup_page.dart';
-import 'package:roomie/auth/username_setup_page.dart';
-import 'package:roomie/home/home_page.dart';
-import 'package:roomie/widgets/customappbar.dart';
+import 'package:roomie/auth/auth_gateway.dart';
 import 'auth_services.dart';
 
 class SigninPage extends StatefulWidget {
@@ -47,7 +45,7 @@ class _SigninPageState extends State<SigninPage> {
       if (user != null && mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => UsernameSetupPage()),
+          MaterialPageRoute(builder: (_) => AuthGateway()),
         );
       }
     } catch (e) {
@@ -72,7 +70,7 @@ class _SigninPageState extends State<SigninPage> {
       if (user != null && mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => UsernameSetupPage()),
+          MaterialPageRoute(builder: (_) => AuthGateway()),
         );
       }
     } catch (e) {

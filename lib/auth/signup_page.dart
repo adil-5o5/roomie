@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:roomie/auth/username_setup_page.dart';
-import 'package:roomie/widgets/customappbar.dart';
+import 'package:roomie/auth/auth_gateway.dart';
 import 'auth_services.dart';
 
 class SignupPage extends StatefulWidget {
@@ -77,7 +76,7 @@ class _SignupPageState extends State<SignupPage> {
       if (user != null) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => UsernameSetupPage()),
+          MaterialPageRoute(builder: (_) => AuthGateway()),
         );
       }
     } catch (e) {
@@ -105,7 +104,7 @@ class _SignupPageState extends State<SignupPage> {
       if (user != null && mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => UsernameSetupPage()),
+          MaterialPageRoute(builder: (_) => AuthGateway()),
         );
       }
     } catch (e) {
@@ -257,6 +256,62 @@ class _SignupPageState extends State<SignupPage> {
                         onPressed: () {
                           setState(() {
                             _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: 24),
+
+              // Confirm Password Field
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Confirm Password",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    decoration: InputDecoration(
+                      hintText: "Confirm your password",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.black, width: 2),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.grey[600],
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
                           });
                         },
                       ),

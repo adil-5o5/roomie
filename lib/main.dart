@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:roomie/auth/signin_page.dart';
-import 'package:roomie/home/home_page.dart';
+import 'package:roomie/auth/auth_gateway.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -15,6 +14,10 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: SigninPage());
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Roomie',
+      home: AuthGateway(),
+    );
   }
 }
