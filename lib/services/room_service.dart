@@ -53,7 +53,8 @@ class RoomService {
         'createdBy': user.uid, // Track who created the room
         'createdAt':
             FieldValue.serverTimestamp(), // Server timestamp for consistency
-        'members': [user.uid], // Creator is automatically the first member
+        'members':
+            [], // Owner is not counted as a member - they have special privileges
       };
 
       // Step 3: Save room to Firestore and get document reference
@@ -179,14 +180,17 @@ class RoomService {
   }
 
   /// Check if current user is a member of the room
-  /// Returns true if user is in the room's members list
+  /// Returns true if user is the owner OR in the room's members list
   Future<bool> isUserInRoom(String roomId) async {
     try {
       final user = _auth.currentUser;
       if (user == null) return false;
 
       final room = await getRoom(roomId);
-      return room?.members.contains(user.uid) ?? false;
+      if (room == null) return false;
+
+      // User is in room if they are the owner OR a member
+      return room.createdBy == user.uid || room.members.contains(user.uid);
     } catch (e) {
       print('❌ Error checking room membership: $e');
       return false;

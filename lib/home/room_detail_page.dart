@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:roomie/models/room_model.dart';
 import 'package:roomie/services/room_service.dart';
 import 'package:roomie/home/chat_page.dart';
@@ -114,9 +115,20 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
                 ),
               ),
               SizedBox(height: 12),
-              Text(
-                "Created by ${room.createdBy}",
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              FutureBuilder<String>(
+                future: _getUsername(room.createdBy),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Text(
+                      "Created by loading...",
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    );
+                  }
+                  return Text(
+                    "Created by @${snapshot.data ?? 'Unknown'}",
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  );
+                },
               ),
             ],
           ),
@@ -230,6 +242,8 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
               }
 
               final isUserInRoom = membershipSnapshot.data ?? false;
+              // Room is full when members (excluding owner) reach the limit
+              // Owner is not counted as a member, so they don't take up a slot
               final isRoomFull = room.members.length >= room.membersCount;
               final isOwner = room.createdBy == _auth.currentUser?.uid;
 
@@ -426,6 +440,26 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
       setState(() {
         _isJoining = false;
       });
+    }
+  }
+
+  /// Get username from user ID
+  /// Fetches the username from Firestore users collection
+  Future<String> _getUsername(String userId) async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (userDoc.exists) {
+        final userData = userDoc.data();
+        return userData?['username'] ?? 'Unknown';
+      }
+      return 'Unknown';
+    } catch (e) {
+      print('Error fetching username: $e');
+      return 'Unknown';
     }
   }
 

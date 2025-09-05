@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:roomie/widgets/customappbar.dart';
 import 'package:roomie/widgets/roomtile.dart';
 import 'package:roomie/models/room_model.dart';
 import 'package:roomie/services/room_service.dart';
-import 'createroom_page.dart';
+import 'package:roomie/navigation/main_navigation.dart';
 import 'room_detail_page.dart';
 
 /// Home page that displays a list of available rooms for users to browse and join
@@ -30,9 +29,6 @@ class _HomePageState extends State<HomePage> {
   // Firebase Auth instance to get current user information
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // List to store filtered rooms based on search query
-  List<RoomModel> _filteredRooms = [];
-
   // Current search query string
   String _searchQuery = '';
 
@@ -47,7 +43,19 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: CustomAppBar(title: "H O M E", showBackButton: false),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          "H O M E",
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.all(16.0),
@@ -299,10 +307,13 @@ class _HomePageState extends State<HomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => CreateRoomPage()),
-          );
+          // Navigate to the Create tab in main navigation
+          // This ensures consistent navigation flow
+          final mainNav = context
+              .findAncestorStateOfType<MainNavigationState>();
+          if (mainNav != null) {
+            mainNav.changeTab(1); // Switch to Create tab (index 1)
+          }
         },
         backgroundColor: Colors.black,
         child: Icon(Icons.add, color: Colors.white),

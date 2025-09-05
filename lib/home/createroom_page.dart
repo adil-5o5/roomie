@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:roomie/widgets/customappbar.dart';
 import 'package:roomie/services/room_service.dart';
+import 'package:roomie/navigation/main_navigation.dart';
 
 class CreateRoomPage extends StatefulWidget {
   const CreateRoomPage({super.key});
@@ -65,6 +65,14 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
         _isLoading = false;
       });
 
+      // Clear all text fields after successful room creation
+      _titleController.clear();
+      _descriptionController.clear();
+      _keywordsController.clear();
+      setState(() {
+        _peopleCount = null;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Room created successfully!"),
@@ -72,8 +80,11 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
         ),
       );
 
-      // Navigate back to home page
-      Navigator.pop(context);
+      // Navigate back to home tab in main navigation
+      final mainNav = context.findAncestorStateOfType<MainNavigationState>();
+      if (mainNav != null) {
+        mainNav.changeTab(0); // Switch to Home tab (index 0)
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -92,7 +103,23 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: CustomAppBar(title: "Create Room", showBackButton: true),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+        ),
+        title: Text(
+          "Create Room",
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(24.0),
@@ -315,6 +342,7 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
                     ),
                     elevation: 0,
                   ),
+
                   child: _isLoading
                       ? SizedBox(
                           height: 20,

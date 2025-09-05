@@ -2,11 +2,13 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthServices {
   //instance of firebase
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   //stream to check user login status in real time
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -143,13 +145,138 @@ class AuthServices {
     }
   }
 
-  //delete account
+  /// Delete user account and all associated data from Firestore
+  /// This method performs a complete cleanup of user data
   Future<void> deleteAccount() async {
     try {
-      await _auth.currentUser?.delete();
-      print("✅ Account deleted");
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No user logged in');
+
+      print(
+        '🗑️ Starting comprehensive account deletion for user: ${user.uid}',
+      );
+
+      // Step 1: Delete all rooms created by the user
+      await _deleteUserRooms(user.uid);
+
+      // Step 2: Remove user from all rooms they're a member of
+      await _removeUserFromAllRooms(user.uid);
+
+      // Step 3: Delete all messages sent by the user
+      await _deleteUserMessages(user.uid);
+
+      // Step 4: Delete user document from Firestore
+      await _firestore.collection('users').doc(user.uid).delete();
+      print('✅ User document deleted from Firestore');
+
+      // Step 5: Delete Firebase Auth user account
+      await user.delete();
+      print('✅ Firebase Auth user deleted');
+
+      print('✅ Account deletion completed successfully');
     } catch (e) {
-      print("❌ Delete account failed: $e");
+      print('❌ Delete account failed: $e');
+      throw Exception('Failed to delete account: $e');
+    }
+  }
+
+  /// Delete all rooms created by the user
+  Future<void> _deleteUserRooms(String userId) async {
+    try {
+      print('🗑️ Deleting rooms created by user: $userId');
+
+      // Get all rooms created by the user
+      final roomsQuery = await _firestore
+          .collection('rooms')
+          .where('createdBy', isEqualTo: userId)
+          .get();
+
+      // Delete each room and its messages
+      for (final roomDoc in roomsQuery.docs) {
+        final roomId = roomDoc.id;
+        print('🗑️ Deleting room: $roomId');
+
+        // Delete all messages in this room
+        final messagesQuery = await _firestore
+            .collection('rooms')
+            .doc(roomId)
+            .collection('messages')
+            .get();
+
+        // Delete each message
+        for (final messageDoc in messagesQuery.docs) {
+          await messageDoc.reference.delete();
+        }
+
+        // Delete the room document
+        await roomDoc.reference.delete();
+      }
+
+      print('✅ Deleted ${roomsQuery.docs.length} rooms created by user');
+    } catch (e) {
+      print('❌ Error deleting user rooms: $e');
+      throw Exception('Failed to delete user rooms: $e');
+    }
+  }
+
+  /// Remove user from all rooms they're a member of
+  Future<void> _removeUserFromAllRooms(String userId) async {
+    try {
+      print('🗑️ Removing user from all rooms: $userId');
+
+      // Get all rooms where user is a member
+      final roomsQuery = await _firestore
+          .collection('rooms')
+          .where('members', arrayContains: userId)
+          .get();
+
+      // Remove user from each room
+      for (final roomDoc in roomsQuery.docs) {
+        await roomDoc.reference.update({
+          'members': FieldValue.arrayRemove([userId]),
+        });
+      }
+
+      print('✅ Removed user from ${roomsQuery.docs.length} rooms');
+    } catch (e) {
+      print('❌ Error removing user from rooms: $e');
+      throw Exception('Failed to remove user from rooms: $e');
+    }
+  }
+
+  /// Delete all messages sent by the user
+  Future<void> _deleteUserMessages(String userId) async {
+    try {
+      print('🗑️ Deleting messages sent by user: $userId');
+
+      // Get all rooms to check for user messages
+      final roomsQuery = await _firestore.collection('rooms').get();
+
+      int deletedMessages = 0;
+
+      // Check each room for user messages
+      for (final roomDoc in roomsQuery.docs) {
+        final roomId = roomDoc.id;
+
+        // Get all messages in this room sent by the user
+        final messagesQuery = await _firestore
+            .collection('rooms')
+            .doc(roomId)
+            .collection('messages')
+            .where('senderId', isEqualTo: userId)
+            .get();
+
+        // Delete each message
+        for (final messageDoc in messagesQuery.docs) {
+          await messageDoc.reference.delete();
+          deletedMessages++;
+        }
+      }
+
+      print('✅ Deleted $deletedMessages messages sent by user');
+    } catch (e) {
+      print('❌ Error deleting user messages: $e');
+      throw Exception('Failed to delete user messages: $e');
     }
   }
 }

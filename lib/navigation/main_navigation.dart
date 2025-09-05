@@ -10,10 +10,10 @@ class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
+  State<MainNavigation> createState() => MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+class MainNavigationState extends State<MainNavigation> {
   // Tracks which tab is currently selected (0=Home, 1=Create, 2=Settings)
   int _currentIndex = 0;
 
@@ -24,6 +24,14 @@ class _MainNavigationState extends State<MainNavigation> {
     CreateRoomPage(), // Tab 1: Create new rooms
     SettingsPage(), // Tab 2: User profile and account management
   ];
+
+  /// Public method to change the current tab
+  /// This allows other widgets to programmatically switch tabs
+  void changeTab(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

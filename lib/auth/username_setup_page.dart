@@ -113,13 +113,20 @@ class _UsernameSetupPageState extends State<UsernameSetupPage> {
         return;
       }
 
-      // Step 4: Show saving state
+      // Step 4: Show confirmation dialog
       setState(() {
-        _isLoading = true;
         _isCheckingUsername = false;
       });
 
-      // Step 5: Save username to user document in Firestore
+      final confirmed = await _showUsernameConfirmationDialog(username);
+      if (!confirmed) return;
+
+      // Step 5: Show saving state
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Step 6: Save username to user document in Firestore
       final user = _auth.currentUser;
       if (user != null) {
         // Create or update user document with username and profile info
@@ -139,9 +146,10 @@ class _UsernameSetupPageState extends State<UsernameSetupPage> {
 
         // Step 7: Navigate to main app navigation
         if (mounted) {
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => MainNavigation()),
+            (route) => false,
           );
         }
       }
@@ -153,6 +161,110 @@ class _UsernameSetupPageState extends State<UsernameSetupPage> {
         _isCheckingUsername = false;
       });
     }
+  }
+
+  /// Show confirmation dialog for username selection
+  /// This warns users that username cannot be changed later
+  Future<bool> _showUsernameConfirmationDialog(String username) async {
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text(
+                'Confirm Username',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Your username will be:',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  ),
+                  SizedBox(height: 8),
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Text(
+                      '@$username',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.orange[600],
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Username cannot be changed later. Please choose carefully.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.orange[800],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Confirm',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 
   @override
@@ -370,23 +482,29 @@ class _UsernameSetupPageState extends State<UsernameSetupPage> {
 
               SizedBox(height: 24),
 
-              // Skip for now option
-              TextButton(
-                onPressed: _isLoading
-                    ? null
-                    : () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => MainNavigation()),
-                        );
-                      },
-                child: Text(
-                  "Skip for now",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
+              // Username is required notice
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Username is required to continue. It cannot be changed later.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.blue[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

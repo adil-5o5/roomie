@@ -89,25 +89,96 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
     }
   }
 
-  /// Delete user account
+  /// Delete user account and all associated data
   Future<void> _deleteAccount() async {
-    // Show confirmation dialog
+    // Show confirmation dialog with more detailed warning
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Delete Account"),
-        content: Text(
-          "Are you sure you want to delete your account? This action cannot be undone and will remove all your data.",
+        title: Text(
+          "Delete Account",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Are you sure you want to permanently delete your account?",
+              style: TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.red[600], size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        "This will permanently delete:",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    "• Your profile and account data\n• All rooms you created\n• All your messages in rooms\n• Your membership in other rooms",
+                    style: TextStyle(fontSize: 14, color: Colors.red[700]),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              "This action cannot be undone!",
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.red[600],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text("Cancel"),
+            child: Text(
+              "Cancel",
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text("Delete"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              "Delete Forever",
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -122,14 +193,36 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
     try {
       final user = _auth.currentUser;
       if (user != null) {
-        // Delete user document from Firestore
+        print('🗑️ Starting account deletion for user: ${user.uid}');
+
+        // Step 1: Delete all rooms created by the user
+        await _deleteUserRooms(user.uid);
+
+        // Step 2: Remove user from all rooms they're a member of
+        await _removeUserFromAllRooms(user.uid);
+
+        // Step 3: Delete all messages sent by the user
+        await _deleteUserMessages(user.uid);
+
+        // Step 4: Delete user document from Firestore
         await _firestore.collection('users').doc(user.uid).delete();
+        print('✅ User document deleted from Firestore');
 
-        // Delete user account
+        // Step 5: Delete Firebase Auth user account
         await user.delete();
+        print('✅ Firebase Auth user deleted');
 
-        // Navigate to sign in page
+        // Step 6: Show success message
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Account deleted successfully"),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          // Step 7: Navigate to sign in page
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => SigninPage()),
@@ -138,16 +231,118 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
         }
       }
     } catch (e) {
+      print('❌ Error deleting account: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error deleting account: $e"),
           backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
         ),
       );
     } finally {
       setState(() {
         _isDeleting = false;
       });
+    }
+  }
+
+  /// Delete all rooms created by the user
+  Future<void> _deleteUserRooms(String userId) async {
+    try {
+      print('🗑️ Deleting rooms created by user: $userId');
+
+      // Get all rooms created by the user
+      final roomsQuery = await _firestore
+          .collection('rooms')
+          .where('createdBy', isEqualTo: userId)
+          .get();
+
+      // Delete each room and its messages
+      for (final roomDoc in roomsQuery.docs) {
+        final roomId = roomDoc.id;
+        print('🗑️ Deleting room: $roomId');
+
+        // Delete all messages in this room
+        final messagesQuery = await _firestore
+            .collection('rooms')
+            .doc(roomId)
+            .collection('messages')
+            .get();
+
+        // Delete each message
+        for (final messageDoc in messagesQuery.docs) {
+          await messageDoc.reference.delete();
+        }
+
+        // Delete the room document
+        await roomDoc.reference.delete();
+      }
+
+      print('✅ Deleted ${roomsQuery.docs.length} rooms created by user');
+    } catch (e) {
+      print('❌ Error deleting user rooms: $e');
+      throw Exception('Failed to delete user rooms: $e');
+    }
+  }
+
+  /// Remove user from all rooms they're a member of
+  Future<void> _removeUserFromAllRooms(String userId) async {
+    try {
+      print('🗑️ Removing user from all rooms: $userId');
+
+      // Get all rooms where user is a member
+      final roomsQuery = await _firestore
+          .collection('rooms')
+          .where('members', arrayContains: userId)
+          .get();
+
+      // Remove user from each room
+      for (final roomDoc in roomsQuery.docs) {
+        await roomDoc.reference.update({
+          'members': FieldValue.arrayRemove([userId]),
+        });
+      }
+
+      print('✅ Removed user from ${roomsQuery.docs.length} rooms');
+    } catch (e) {
+      print('❌ Error removing user from rooms: $e');
+      throw Exception('Failed to remove user from rooms: $e');
+    }
+  }
+
+  /// Delete all messages sent by the user
+  Future<void> _deleteUserMessages(String userId) async {
+    try {
+      print('🗑️ Deleting messages sent by user: $userId');
+
+      // Get all rooms to check for user messages
+      final roomsQuery = await _firestore.collection('rooms').get();
+
+      int deletedMessages = 0;
+
+      // Check each room for user messages
+      for (final roomDoc in roomsQuery.docs) {
+        final roomId = roomDoc.id;
+
+        // Get all messages in this room sent by the user
+        final messagesQuery = await _firestore
+            .collection('rooms')
+            .doc(roomId)
+            .collection('messages')
+            .where('senderId', isEqualTo: userId)
+            .get();
+
+        // Delete each message
+        for (final messageDoc in messagesQuery.docs) {
+          await messageDoc.reference.delete();
+          deletedMessages++;
+        }
+      }
+
+      print('✅ Deleted $deletedMessages messages sent by user');
+    } catch (e) {
+      print('❌ Error deleting user messages: $e');
+      throw Exception('Failed to delete user messages: $e');
     }
   }
 

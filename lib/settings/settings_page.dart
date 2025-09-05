@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:roomie/settings/profile_details_page.dart';
+import 'package:roomie/home/room_detail_page.dart';
+import 'package:roomie/services/room_service.dart';
 
 /// Settings page with profile section and my rooms section
 /// Shows user profile information and rooms created by the user
@@ -15,6 +17,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final RoomService _roomService = RoomService();
   Map<String, dynamic>? _userData;
 
   @override
@@ -325,58 +328,97 @@ class _SettingsPageState extends State<SettingsPage> {
 
                             return Container(
                               margin: EdgeInsets.only(bottom: 12),
-                              padding: EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 color: Colors.grey[50],
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: Colors.grey[200]!),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Row(
                                 children: [
-                                  Text(
-                                    data['title'] ?? 'Untitled Room',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    data['description'] ?? 'No description',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.people_outline,
-                                        size: 16,
-                                        color: Colors.grey[600],
-                                      ),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        "${(data['members'] as List?)?.length ?? 0} members",
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
+                                  // Main content area (clickable)
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        // Navigate to room detail page
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                RoomDetailPage(roomId: room.id),
+                                          ),
+                                        );
+                                      },
+                                      child: Padding(
+                                        padding: EdgeInsets.all(16),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              data['title'] ?? 'Untitled Room',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                            SizedBox(height: 8),
+                                            Text(
+                                              data['description'] ??
+                                                  'No description',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            SizedBox(height: 12),
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.people_outline,
+                                                  size: 16,
+                                                  color: Colors.grey[600],
+                                                ),
+                                                SizedBox(width: 6),
+                                                Text(
+                                                  "${(data['members'] as List?)?.length ?? 0} members",
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                ),
+                                                Spacer(),
+                                                Text(
+                                                  "Created ${_formatDate(data['createdAt'])}",
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[500],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      Spacer(),
-                                      Text(
-                                        "Created ${_formatDate(data['createdAt'])}",
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[500],
-                                        ),
+                                    ),
+                                  ),
+                                  // Delete button
+                                  Container(
+                                    margin: EdgeInsets.only(right: 12),
+                                    child: IconButton(
+                                      onPressed: () => _showDeleteRoomDialog(
+                                        room.id,
+                                        data['title'] ?? 'Untitled Room',
                                       ),
-                                    ],
+                                      icon: Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.red[600],
+                                        size: 20,
+                                      ),
+                                      tooltip: "Delete Room",
+                                    ),
                                   ),
                                 ],
                               ),
@@ -421,6 +463,170 @@ class _SettingsPageState extends State<SettingsPage> {
       }
     } catch (e) {
       return 'Unknown';
+    }
+  }
+
+  /// Show confirmation dialog for deleting a room
+  Future<void> _showDeleteRoomDialog(String roomId, String roomTitle) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Delete Room',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to delete this room?',
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Text(
+                  roomTitle,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.red[600],
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This action cannot be undone. All messages and data in this room will be permanently deleted.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.red[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Delete',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _deleteRoom(roomId);
+    }
+  }
+
+  /// Delete the room and handle the result
+  Future<void> _deleteRoom(String roomId) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(color: Colors.black),
+                SizedBox(width: 16),
+                Text('Deleting room...'),
+              ],
+            ),
+          );
+        },
+      );
+
+      // Delete the room
+      bool success = await _roomService.deleteRoom(roomId);
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Room deleted successfully"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Refresh the page to update the room list
+        setState(() {});
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to delete room"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if it's still open
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error deleting room: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }

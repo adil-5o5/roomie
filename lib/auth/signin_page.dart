@@ -43,9 +43,10 @@ class _SigninPageState extends State<SigninPage> {
       );
 
       if (user != null && mounted) {
-        Navigator.pushReplacement(
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => AuthGateway()),
+          (route) => false,
         );
       }
     } catch (e) {
@@ -68,9 +69,10 @@ class _SigninPageState extends State<SigninPage> {
       User? user = await _authServices.googleSignIn();
 
       if (user != null && mounted) {
-        Navigator.pushReplacement(
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => AuthGateway()),
+          (route) => false,
         );
       }
     } catch (e) {
