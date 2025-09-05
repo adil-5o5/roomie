@@ -49,26 +49,36 @@ class AuthServices {
     }
   }
 
-  //debug google sign in configuration
+  // Debug method to check Google Sign-In configuration
   Future<void> debugGoogleSignInConfig() async {
+    print("🔍 Debugging Google Sign-In Configuration...");
+
     try {
-      print("🔍 Debugging Google Sign-In configuration...");
-      print("📱 Package name: ${_googleSignIn.clientId}");
-      print("🔑 Google Sign-In instance: $_googleSignIn");
+      // Check if Google Play Services is available
+      bool isAvailable = await _googleSignIn.isSignedIn();
+      print("✅ Google Sign-In is available: $isAvailable");
 
-      // Check if user is already signed in
-      final isSignedIn = await _googleSignIn.isSignedIn();
-      print("👤 User already signed in: $isSignedIn");
-
-      if (isSignedIn) {
-        final currentUser = await _googleSignIn.signInSilently();
-        print("👤 Current Google user: ${currentUser?.email}");
+      // Check current user
+      GoogleSignInAccount? currentUser = _googleSignIn.currentUser;
+      if (currentUser != null) {
+        print("👤 Current Google user: ${currentUser.email}");
+      } else {
+        print("❌ No current Google user");
       }
 
-      print("✅ Google Sign-In configuration check completed");
+      // Check if user can sign in
+      bool canSignIn = await _googleSignIn.isSignedIn();
+      print("🔐 Can sign in: $canSignIn");
     } catch (e) {
-      print("❌ Error checking Google Sign-In configuration: $e");
+      print("❌ Error checking Google Sign-In config: $e");
     }
+
+    print("📱 Package name: com.example.roomie");
+    print("🔑 Make sure you have:");
+    print("   1. Generated SHA-1 fingerprint for your app");
+    print("   2. Added SHA-1 to Firebase Console");
+    print("   3. Enabled Google Sign-In in Firebase Auth");
+    print("   4. Updated google-services.json with real OAuth client ID");
   }
 
   //google in sign in

@@ -15,8 +15,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: Colors.black, // Change color to your theme // Shadow
-      centerTitle: true, // Center the title
+      backgroundColor: Colors.black,
+      centerTitle: true,
       leading: showBackButton
           ? IconButton(
               icon: const Icon(Icons.arrow_back),

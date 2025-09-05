@@ -1,8 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:roomie/widgets/customappbar.dart';
 import 'package:roomie/widgets/roomtile.dart';
-import 'package:roomie/theme/app_theme.dart';
+import 'package:roomie/models/room_model.dart';
+import 'package:roomie/services/room_service.dart';
+import 'createroom_page.dart';
+import 'room_detail_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,38 +16,10 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final TextEditingController _searchController = TextEditingController();
-  final List<Map<String, dynamic>> _rooms = [
-    {
-      'title': 'Python Developer Room',
-      'description': 'Looking for Python developers to join our team',
-      'location': 'New York, NY',
-      'price': '\$1500/month',
-    },
-    {
-      'title': 'Frontend Developer Room',
-      'description': 'Seeking frontend developers for web projects',
-      'location': 'San Francisco, CA',
-      'price': '\$1800/month',
-    },
-    {
-      'title': 'Mobile App Developer Room',
-      'description': 'Join our mobile app development team',
-      'location': 'Austin, TX',
-      'price': '\$1600/month',
-    },
-    {
-      'title': 'Data Scientist Room',
-      'description': 'Looking for data scientists and ML engineers',
-      'location': 'Seattle, WA',
-      'price': '\$2000/month',
-    },
-    {
-      'title': 'DevOps Engineer Room',
-      'description': 'Seeking DevOps engineers for infrastructure',
-      'location': 'Boston, MA',
-      'price': '\$1700/month',
-    },
-  ];
+  final RoomService _roomService = RoomService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  List<RoomModel> _filteredRooms = [];
+  String _searchQuery = '';
 
   @override
   void dispose() {
@@ -55,168 +30,249 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
-        child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Custom App Bar
-                Container(
-                  decoration: AppTheme.glassmorphicDecoration,
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.meeting_room,
-                        color: AppTheme.primaryOrange,
-                        size: 28,
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        "H O M E",
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                              color: AppTheme.textPrimary,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
-                            ),
-                      ),
-                      Spacer(),
-                      IconButton(
-                        onPressed: () {
-                          // TODO: Add profile or settings functionality
-                        },
-                        icon: Icon(
-                          Icons.person_outline,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(height: 24),
-
-                // Search Bar with glassmorphic effect
-                Container(
-                  decoration: AppTheme.glassmorphicCardDecoration,
-                  padding: EdgeInsets.all(4),
-                  child: TextField(
-                    controller: _searchController,
-                    style: TextStyle(color: AppTheme.textPrimary),
-                    decoration: InputDecoration(
-                      hintText: "Search for rooms...",
-                      hintStyle: TextStyle(color: AppTheme.textSecondary),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: AppTheme.textSecondary,
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(Icons.clear, color: AppTheme.textSecondary),
-                        onPressed: () => _searchController.clear(),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.glassBorderRadius,
-                        ),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.glassBorderRadius,
-                        ),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.glassBorderRadius,
-                        ),
-                        borderSide: BorderSide(
-                          color: AppTheme.primaryOrange,
-                          width: 2,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: AppTheme.lightGrey.withOpacity(0.1),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 18,
-                      ),
-                    ),
-                    onChanged: (value) {
-                      // TODO: Implement search functionality
+      backgroundColor: Colors.grey[50],
+      appBar: CustomAppBar(title: "H O M E", showBackButton: false),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Search Bar
+              TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: "Search for rooms...",
+                  hintStyle: TextStyle(color: Colors.grey[500]),
+                  prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.clear, color: Colors.grey[500]),
+                    onPressed: () {
+                      _searchController.clear();
                       setState(() {
-                        // Filter rooms based on search
+                        _searchQuery = '';
                       });
                     },
                   ),
-                ),
-
-                SizedBox(height: 20),
-
-                // Results count
-                Container(
-                  decoration: AppTheme.glassmorphicDecoration,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Text(
-                    "${_rooms.length} rooms found",
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.black, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 18,
                   ),
                 ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.toLowerCase();
+                  });
+                },
+              ),
 
-                SizedBox(height: 16),
+              SizedBox(height: 20),
 
-                // Rooms List
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _rooms.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: EdgeInsets.only(bottom: 12),
-                        child: RoomTile(),
+              // Rooms List with StreamBuilder
+              Expanded(
+                child: StreamBuilder<List<RoomModel>>(
+                  stream: _roomService.getRoomsStream(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(
+                        child: CircularProgressIndicator(color: Colors.black),
                       );
-                    },
-                  ),
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: Colors.red[400],
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              "Error loading rooms",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              snapshot.error.toString(),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final allRooms = snapshot.data ?? [];
+                    final currentUserId = _auth.currentUser?.uid;
+
+                    // Filter rooms based on search query and exclude user's own rooms
+                    final filteredRooms = allRooms.where((room) {
+                      // Exclude rooms created by current user
+                      if (room.createdBy == currentUserId) return false;
+
+                      // Apply search filter
+                      if (_searchQuery.isEmpty) return true;
+                      return room.title.toLowerCase().contains(_searchQuery) ||
+                          room.description.toLowerCase().contains(
+                            _searchQuery,
+                          ) ||
+                          room.keywords.any(
+                            (keyword) =>
+                                keyword.toLowerCase().contains(_searchQuery),
+                          );
+                    }).toList();
+
+                    if (filteredRooms.isEmpty && _searchQuery.isNotEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search_off,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              "No rooms found",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              "Try searching with different keywords",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (filteredRooms.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              "No rooms yet",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              "Create the first room to get started!",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children: [
+                        // Results count
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            "${filteredRooms.length} rooms found",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: 16),
+
+                        // Rooms List
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: filteredRooms.length,
+                            itemBuilder: (context, index) {
+                              final room = filteredRooms[index];
+                              return Padding(
+                                padding: EdgeInsets.only(bottom: 12),
+                                child: RoomTile(
+                                  title: room.title,
+                                  description: room.description,
+                                  peopleCount: room.members.length,
+                                  onTap: () => _navigateToRoomDetail(room),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          gradient: AppTheme.accentGradient,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primaryOrange.withOpacity(0.3),
-              blurRadius: 20,
-              spreadRadius: 0,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: FloatingActionButton(
-          onPressed: () {
-            // TODO: Navigate to add room page
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("Add Room functionality coming soon!"),
-                backgroundColor: AppTheme.accentBlue,
-              ),
-            );
-          },
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: Icon(Icons.add, color: Colors.white),
-          tooltip: "Add New Room",
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => CreateRoomPage()),
+          );
+        },
+        backgroundColor: Colors.black,
+        child: Icon(Icons.add, color: Colors.white),
+        tooltip: "Add New Room",
       ),
+    );
+  }
+
+  /// Navigate to room detail page when a room tile is tapped
+  void _navigateToRoomDetail(RoomModel room) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => RoomDetailPage(roomId: room.id)),
     );
   }
 }
