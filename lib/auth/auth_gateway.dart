@@ -8,7 +8,7 @@ import 'package:roomie/navigation/main_navigation.dart';
 /// Authentication gateway that determines which screen to show based on user state
 /// This is the main entry point that handles authentication flow like Instagram
 class AuthGateway extends StatefulWidget {
-  const AuthGateway({super.key});
+  const AuthGateway({Key? key}) : super(key: key);
 
   @override
   State<AuthGateway> createState() => _AuthGatewayState();

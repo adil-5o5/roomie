@@ -372,7 +372,7 @@ class MessageModel {
 2. **Join/Limit System**: 2 rooms per week limit per user
 3. **Owner Privileges**: Room creators are owners with special permissions
 4. **Real-time Updates**: Live room member counts and availability
-5, #owner can delte the room if they want in settings section -> my room section
+5, **deletion**: Owner can delte the room if they want in settings section -> my room section.
 #### Chat System
 1. **Real-time Messaging**: Instant message delivery
 2. **Message History**: Persistent chat history
